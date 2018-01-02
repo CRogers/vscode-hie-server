@@ -11,14 +11,17 @@ import {
   ExtensionContext,
   languages,
   window,
-  workspace
+  workspace,
+  DecorationOptions,
+  DecorationRangeBehavior,
+  DecorationRenderOptions,
+  Range,
+  ThemeColor
 } from 'vscode';
 import * as msg from 'vscode-jsonrpc';
 import {
   LanguageClient,
   LanguageClientOptions,
-  Position,
-  Range,
   RequestType,
   RevealOutputChannelOn,
   ServerOptions,
@@ -29,6 +32,8 @@ import {
 import { InsertType } from './commands/insertType';
 import { ShowType } from './commands/showType';
 import { DocsBrowser } from './docsBrowser';
+import { RequestType0 } from 'vscode-jsonrpc/lib/messages';
+import { setInterval } from 'timers';
 
 // --------------------------------------------------------------------
 // Example from https://github.com/Microsoft/vscode/issues/2059
@@ -97,13 +102,13 @@ function activateNoHieCheck(context: ExtensionContext) {
       fileEvents: workspace.createFileSystemWatcher('**/.clientrc'),
     },
     middleware: {
-      provideHover: DocsBrowser.hoverLinksMiddlewareHook,
+      provideHover: DocsBrowser.hoverLinksMiddlewareHook
     },
     revealOutputChannelOn: RevealOutputChannelOn.Never,
   };
 
   // Create the language client and start the client.
-  const langClient = new LanguageClient('Language Server Haskell', serverOptions, clientOptions);
+  const langClient = new LanguageClient('Language Server Haskell', serverOptions, clientOptions);  
 
   context.subscriptions.push(InsertType.registerCommand(langClient));
   ShowType.registerCommand(langClient).forEach(x => context.subscriptions.push(x));
@@ -114,6 +119,34 @@ function activateNoHieCheck(context: ExtensionContext) {
   registerHiePointCommand(langClient, 'hie.commands.deleteDef', 'hare:deletedef', context);
   registerHiePointCommand(langClient, 'hie.commands.genApplicative', 'hare:genapplicative', context);
   const disposable = langClient.start();
+
+  langClient.onReady().then(() => {
+    langClient.onNotification("textDocument/publishDiagnostics", (diags) => {
+      console.log("diags", diags);
+    })
+  })
+
+  const decoration = window.createTextEditorDecorationType({
+    isWholeLine: true,
+    rangeBehavior: DecorationRangeBehavior.ClosedClosed,
+    after: {
+      contentText: 'Type hole _: Module -> Data.Text.Internal.Lazy.Text',
+      margin: '0 0 0 50px',
+      color: new ThemeColor("editorCursor.foreground")
+    }
+  } as DecorationRenderOptions)
+
+  const line = 2;
+
+  const decs: DecorationOptions[] = [{ 
+    range: new Range(line, 0, line, 5),
+    hoverMessage: 'YOLO'
+  } as DecorationOptions ];
+
+  const textEditor = window.visibleTextEditors[0];
+
+  console.log(textEditor.document.fileName);
+  textEditor.setDecorations(decoration, decs);
 
   context.subscriptions.push(disposable);
 }
