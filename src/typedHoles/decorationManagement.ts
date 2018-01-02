@@ -30,28 +30,31 @@ export class DecorationsPerFile implements Disposable {
 }
 
 class SingleFileDecorations implements Disposable {
-  private readonly decorations: TextEditorDecorationType[] = [];
+  private decorationTypes: TextEditorDecorationType[] = [];
 
   constructor(
     private readonly uri: string
   ) {}
 
   public setDecorations(decorations: DecorationInstance[]) {
-    this.clearAllDecorations();
+    this.clearAllDecorationsTypes();
 
     const textEditor = this.textEditor();
     decorations.forEach(decoration => textEditor.setDecorations(decoration.decorationType, [decoration.range]));
+
+    this.decorationTypes = decorations.map(decoration => decoration.decorationType);
   }
 
   private textEditor(): TextEditor {
     return window.visibleTextEditors.find(textEditor => textEditor.document.uri.toString() === this.uri);
   }
 
-  private clearAllDecorations() {
-    this.decorations.forEach(decoration => decoration.dispose());
+  private clearAllDecorationsTypes() {
+    this.decorationTypes.forEach(decorationType => decorationType.dispose());
+    this.decorationTypes = []
   }
 
   public dispose() {
-    this.clearAllDecorations();
+    this.clearAllDecorationsTypes();
   }
 }

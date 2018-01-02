@@ -5,7 +5,7 @@ import { isTypedHole, TypedHole } from "./typedHoles";
 import { DecorationsPerFile } from "./decorationManagement";
 
 export class TypedHoleDecorator implements Disposable {
-  private readonly decorations: DecorationsPerFile = new DecorationsPerFile();
+  private readonly decorationsPerFile: DecorationsPerFile = new DecorationsPerFile();
 
   constructor(
     private readonly langClient: LanguageClient,
@@ -13,16 +13,13 @@ export class TypedHoleDecorator implements Disposable {
 
   public start(): Disposable {
     this.langClient.onReady().then(() => {
-      this.langClient.onNotification(PublishDiagnosticsNotification.type, (diags: PublishDiagnosticsParams) => {
-        this.addTypeHoleDecoration(diags);
-      });
+      this.langClient.onNotification(PublishDiagnosticsNotification.type, this.addTypeHoleDecoration.bind(this));
     });
     
     return this;
   }
 
   private addTypeHoleDecoration(diagnosticResponse: PublishDiagnosticsParams) {
-    
     const decorations = diagnosticResponse.diagnostics
       .map(diagnostic => { return {
         decorationType: mapOptional(isTypedHole(diagnostic.message), decorationFor),
@@ -30,11 +27,11 @@ export class TypedHoleDecorator implements Disposable {
       }})
       .filter(possibleHole => possibleHole.decorationType !== null);
 
-    this.decorations.get(diagnosticResponse.uri).setDecorations(decorations)
+    this.decorationsPerFile.get(diagnosticResponse.uri).setDecorations(decorations)
   }
 
   public dispose() {
-    this.decorations.dispose();
+    this.decorationsPerFile.dispose();
   }
 }
 
@@ -55,7 +52,7 @@ function decorationFor(typedHoleError: TypedHole) {
     isWholeLine: true,
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     after: {
-      contentText: `Type hole ${typedHoleError.name}: ${typedHoleError.type}`,
+      contentText: `Typed hole ${typedHoleError.name}: ${typedHoleError.type}`,
       margin: '0 0 0 50px',
       color: new ThemeColor("editorCursor.foreground")
     }
