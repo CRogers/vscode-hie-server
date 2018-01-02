@@ -34,7 +34,7 @@ import { ShowType } from './commands/showType';
 import { DocsBrowser } from './docsBrowser';
 import { RequestType0 } from 'vscode-jsonrpc/lib/messages';
 import { setInterval } from 'timers';
-import { initTypeHoleListener } from './typeHoles';
+import { TypeHoleDecorator } from './typedHoles/typedHoleDecorator';
 
 // --------------------------------------------------------------------
 // Example from https://github.com/Microsoft/vscode/issues/2059
@@ -121,7 +121,7 @@ function activateNoHieCheck(context: ExtensionContext) {
   registerHiePointCommand(langClient, 'hie.commands.genApplicative', 'hare:genapplicative', context);
   const disposable = langClient.start();
 
-  initTypeHoleListener(langClient);
+  new TypeHoleDecorator(langClient, context.subscriptions).start();
 
   context.subscriptions.push(disposable);
 }

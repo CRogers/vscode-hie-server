@@ -8,7 +8,6 @@ describe("Typed Hole Tests", () => {
     // Defines a Mocha unit test
     it("should identify a typed hole", () => {
         const typedHole = `
-[ghcmod]
 • Found hole: _name :: Data.Text.Internal.Lazy.Text -> IO ()
 • In the expression: _
   In the expression: _ $ ppllvm myModule
@@ -21,6 +20,25 @@ describe("Typed Hole Tests", () => {
         expect(typedHoles.isTypedHole(typedHole)).to.be.deep.equal({
             name: '_name',
             type: 'Data.Text.Internal.Lazy.Text -> IO ()'
+        })
+    });
+
+    it("should identify a typed hole that has gone onto many lines", () => {
+        const typedHole = `
+• Found hole:
+    _hole :: LLVM.Internal.Target.TargetMachine
+         -> File -> LLVM.Internal.Module.Module -> IO ()
+• In the expression: _
+  In the expression: _ targetMachine (File "foo") llvmModule
+  In the second argument of ‘($)’, namely
+    ‘\ llvmModule -> _ targetMachine (File "foo") llvmModule’
+• Relevant bindings include
+    llvmModule :: LLVM.Internal.Module.Module
+      (bound at /private/var/folders/gx/7lt1gq996118d06q7g9ft7dd080grz/T/ghc-mod1563/Experiment1562-3.hs:35:51)`;
+
+        expect(typedHoles.isTypedHole(typedHole)).to.be.deep.equal({
+            name: '_hole',
+            type: 'LLVM.Internal.Target.TargetMachine -> File -> LLVM.Internal.Module.Module -> IO ()',
         })
     });
 

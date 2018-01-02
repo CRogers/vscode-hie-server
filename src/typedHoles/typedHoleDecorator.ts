@@ -1,79 +1,84 @@
-import { LanguageClient, NotificationType0, Diagnostic, PublishDiagnosticsParams, PublishDiagnosticsNotification } from "vscode-languageclient/lib/main";
+import { LanguageClient, NotificationType0, Diagnostic, PublishDiagnosticsParams, PublishDiagnosticsNotification, Range as LspRange } from "vscode-languageclient/lib/main";
 import { window, DecorationRangeBehavior, ThemeColor, DecorationRenderOptions, DecorationOptions, Range, TextEditorDecorationType } from "vscode";
 import { NotificationType1 } from "vscode-jsonrpc";
+import { isTypedHole, TypedHole } from "./typedHoles";
 
 interface DecorationsPerFile {
   [uri: string]: TextEditorDecorationType[];
 }
 
-class TypeHoleDecorator {
+export class TypeHoleDecorator {
   private readonly decorations: DecorationsPerFile = {};
 
   constructor(
     private readonly langClient: LanguageClient,
     private readonly subscriptions: { dispose(): any }[],
-  ) {
-    langClient.onReady().then(() => {
-      langClient.onNotification(PublishDiagnosticsNotification.type, (diags: PublishDiagnosticsParams) => {
-        console.log("diags", diags);
-      })
-    })
+  ) {}
+
+  public start() {
+    this.langClient.onReady().then(() => {
+      this.langClient.onNotification(PublishDiagnosticsNotification.type, (diags: PublishDiagnosticsParams) => {
+        console.log(diags);
+        this.addTypeHoleDecoration(diags);
+      });
+    });
   }
 
   private addTypeHoleDecoration(diagnosticResponse: PublishDiagnosticsParams) {
     const uri = diagnosticResponse.uri;
-    const textEditor = window.visibleTextEditors.find(textEditor => textEditor.document.fileName === uri);
+    const textEditor = window.visibleTextEditors.find(textEditor => textEditor.document.uri.toString() === uri);
     this.clearAllDecorationForFile(uri);
     
-    diagnosticResponse.diagnostics.filter(diagnosticResponse => diagnosticResponse.message)
+    const decorations = diagnosticResponse.diagnostics
+      .map(diagnostic => { return {
+        decorationType: mapOptional(isTypedHole(diagnostic.message), decorationFor),
+        range: diagnostic.range,
+        message: diagnostic.message,
+      }})
+      .filter(possibleHole => possibleHole.decorationType !== null);
 
-    const decoration = window.createTextEditorDecorationType({
-      isWholeLine: true,
-      rangeBehavior: DecorationRangeBehavior.ClosedClosed,
-      after: {
-        contentText: 'Type hole _: Module -> Data.Text.Internal.Lazy.Text',
-        margin: '0 0 0 50px',
-        color: new ThemeColor("editorCursor.foreground")
+    decorations.forEach(decoration => textEditor.setDecorations(decoration.decorationType, [{
+      range: convertRange(decoration.range),
+      hoverMessage: {
+        language: 'text',
+        value: decoration.message
       }
-    } as DecorationRenderOptions)
+    }]));
 
-    // textEditor.setDecorations()
+    this.decorations[uri] = decorations.map(decoration => decoration.decorationType);
   }
 
   private clearAllDecorationForFile(uri: string) {
-    this.decorations[uri].forEach(decoration => decoration.dispose());
+    const decorationsForUri = this.decorations[uri];
+
+    if (decorationsForUri === undefined) {
+      return;
+    }
+
+    decorationsForUri.forEach(decoration => decoration.dispose());
   }
 }
 
-export function initTypeHoleListener(langClient: LanguageClient) {
-  langClient.onReady().then(() => {
-    langClient.onNotification(PublishDiagnosticsNotification.type, (diags: PublishDiagnosticsParams) => {
-      console.log("diags", diags);
-    })
-  })
+function mapOptional<T, R>(item: T | null, func: (t: T) => R): R | null {
+  if (item === null) {
+    return null;
+  }
 
-  const decoration = window.createTextEditorDecorationType({
+  return func(item);
+}
+
+function convertRange(lspRange: LspRange): Range{
+  return new Range(lspRange.start.line, lspRange.start.character, lspRange.end.line, lspRange.end.character);
+}
+
+function decorationFor(typedHoleError: TypedHole) {
+  return window.createTextEditorDecorationType({
     isWholeLine: true,
     rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     after: {
-      contentText: 'Type hole _: Module -> Data.Text.Internal.Lazy.Text',
+      contentText: `Type hole ${typedHoleError.name}: ${typedHoleError.type}`,
       margin: '0 0 0 50px',
       color: new ThemeColor("editorCursor.foreground")
     }
-  } as DecorationRenderOptions)
-
-  const line = 2;
-
-  const decs: DecorationOptions[] = [{ 
-    range: new Range(line, 0, line, 5),
-    hoverMessage: 'YOLO'
-  } as DecorationOptions ];
-
-  const textEditor = window.visibleTextEditors[0];
-
-  console.log(textEditor.document.fileName);
-  textEditor.setDecorations(decoration, decs);
+  } as DecorationRenderOptions);
 }
-
-
-
