@@ -34,6 +34,7 @@ import { ShowType } from './commands/showType';
 import { DocsBrowser } from './docsBrowser';
 import { RequestType0 } from 'vscode-jsonrpc/lib/messages';
 import { setInterval } from 'timers';
+import { initTypeHoleListener } from './typeHoles';
 
 // --------------------------------------------------------------------
 // Example from https://github.com/Microsoft/vscode/issues/2059
@@ -120,33 +121,7 @@ function activateNoHieCheck(context: ExtensionContext) {
   registerHiePointCommand(langClient, 'hie.commands.genApplicative', 'hare:genapplicative', context);
   const disposable = langClient.start();
 
-  langClient.onReady().then(() => {
-    langClient.onNotification("textDocument/publishDiagnostics", (diags) => {
-      console.log("diags", diags);
-    })
-  })
-
-  const decoration = window.createTextEditorDecorationType({
-    isWholeLine: true,
-    rangeBehavior: DecorationRangeBehavior.ClosedClosed,
-    after: {
-      contentText: 'Type hole _: Module -> Data.Text.Internal.Lazy.Text',
-      margin: '0 0 0 50px',
-      color: new ThemeColor("editorCursor.foreground")
-    }
-  } as DecorationRenderOptions)
-
-  const line = 2;
-
-  const decs: DecorationOptions[] = [{ 
-    range: new Range(line, 0, line, 5),
-    hoverMessage: 'YOLO'
-  } as DecorationOptions ];
-
-  const textEditor = window.visibleTextEditors[0];
-
-  console.log(textEditor.document.fileName);
-  textEditor.setDecorations(decoration, decs);
+  initTypeHoleListener(langClient);
 
   context.subscriptions.push(disposable);
 }
