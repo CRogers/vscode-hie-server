@@ -18,7 +18,6 @@ export class TypeHoleDecorator {
   public start() {
     this.langClient.onReady().then(() => {
       this.langClient.onNotification(PublishDiagnosticsNotification.type, (diags: PublishDiagnosticsParams) => {
-        console.log(diags);
         this.addTypeHoleDecoration(diags);
       });
     });
