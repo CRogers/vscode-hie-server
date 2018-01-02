@@ -1,5 +1,5 @@
 import { LanguageClient, NotificationType0, Diagnostic, PublishDiagnosticsParams, PublishDiagnosticsNotification, Range as LspRange } from "vscode-languageclient/lib/main";
-import { window, DecorationRangeBehavior, ThemeColor, DecorationRenderOptions, DecorationOptions, Range, TextEditorDecorationType } from "vscode";
+import { window, DecorationRangeBehavior, ThemeColor, DecorationRenderOptions, DecorationOptions, Range, TextEditorDecorationType, Disposable } from "vscode";
 import { NotificationType1 } from "vscode-jsonrpc";
 import { isTypedHole, TypedHole } from "./typedHoles";
 
@@ -7,20 +7,21 @@ interface DecorationsPerFile {
   [uri: string]: TextEditorDecorationType[];
 }
 
-export class TypeHoleDecorator {
+export class TypedHoleDecorator implements Disposable {
   private readonly decorations: DecorationsPerFile = {};
 
   constructor(
     private readonly langClient: LanguageClient,
-    private readonly subscriptions: { dispose(): any }[],
   ) {}
 
-  public start() {
+  public start(): Disposable {
     this.langClient.onReady().then(() => {
       this.langClient.onNotification(PublishDiagnosticsNotification.type, (diags: PublishDiagnosticsParams) => {
         this.addTypeHoleDecoration(diags);
       });
     });
+    
+    return this;
   }
 
   private addTypeHoleDecoration(diagnosticResponse: PublishDiagnosticsParams) {
@@ -55,6 +56,14 @@ export class TypeHoleDecorator {
     }
 
     decorationsForUri.forEach(decoration => decoration.dispose());
+  }
+
+  public dispose() {
+    for (const uri in this.decorations) {
+      if (this.decorations.hasOwnProperty(uri)) {
+        this.clearAllDecorationForFile(uri);
+      }
+    }
   }
 }
 

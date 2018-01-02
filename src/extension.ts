@@ -34,7 +34,7 @@ import { ShowType } from './commands/showType';
 import { DocsBrowser } from './docsBrowser';
 import { RequestType0 } from 'vscode-jsonrpc/lib/messages';
 import { setInterval } from 'timers';
-import { TypeHoleDecorator } from './typedHoles/typedHoleDecorator';
+import { TypedHoleDecorator } from './typedHoles/typedHoleDecorator';
 
 // --------------------------------------------------------------------
 // Example from https://github.com/Microsoft/vscode/issues/2059
@@ -119,11 +119,11 @@ function activateNoHieCheck(context: ExtensionContext) {
   registerHiePointCommand(langClient, 'hie.commands.liftTopLevel', 'hare:lifttotoplevel', context);
   registerHiePointCommand(langClient, 'hie.commands.deleteDef', 'hare:deletedef', context);
   registerHiePointCommand(langClient, 'hie.commands.genApplicative', 'hare:genapplicative', context);
-  const disposable = langClient.start();
+  const langClientDisposable = langClient.start();
 
-  new TypeHoleDecorator(langClient, context.subscriptions).start();
+  const typedHoleDecoratorDisposable = new TypedHoleDecorator(langClient).start();
 
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(langClientDisposable, typedHoleDecoratorDisposable);
 }
 
 function isHieInstalled(): Promise<boolean> {
