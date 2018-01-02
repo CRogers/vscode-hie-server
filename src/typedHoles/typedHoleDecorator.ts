@@ -75,7 +75,5 @@ export function initTypeHoleListener(langClient: LanguageClient) {
   textEditor.setDecorations(decoration, decs);
 }
 
-function filterOutDiagnosticsToJustTypeHoles(messages: string[]) {
 
-}
 

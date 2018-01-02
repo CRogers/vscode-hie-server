@@ -1,12 +1,12 @@
 import {expect} from 'chai'
 
-import * as typedHoles from '../src/typedHoles/util';
+import * as typedHoles from '../src/typedHoles/typedHoles';
 
 // Defines a Mocha test suite to group tests of similar kind together
-describe("Type Hole Tests", () => {
+describe("Typed Hole Tests", () => {
 
     // Defines a Mocha unit test
-    it("should identify a type hole", () => {
+    it("should identify a typed hole", () => {
         const typedHole = `
 [ghcmod]
 • Found hole: _name :: Data.Text.Internal.Lazy.Text -> IO ()
@@ -18,19 +18,19 @@ describe("Type Hole Tests", () => {
       (bound at /private/var/folders/gx/7lt1gq996118d06q7g9ft7dd080grz/T/ghc-mod96474/Experiment96473-6.hs:28:1)
         `;
 
-        expect(typedHoles.isTypeHole(typedHole)).to.be.deep.equal({
+        expect(typedHoles.isTypedHole(typedHole)).to.be.deep.equal({
             name: '_name',
             type: 'Data.Text.Internal.Lazy.Text -> IO ()'
         })
     });
 
-    it("should not identify a normal error as a type hole", () => {
+    it("should not identify a normal error as a typed hole", () => {
         const normalError = `
 [ghcmod]
 Variable not in scope:
     foobar :: Data.Text.Internal.Lazy.Text -> IO ()
         `;
 
-        expect(typedHoles.isTypeHole(normalError)).to.be.null
+        expect(typedHoles.isTypedHole(normalError)).to.be.null
     });
 });
