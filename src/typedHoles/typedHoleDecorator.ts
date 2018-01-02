@@ -1,14 +1,11 @@
 import { LanguageClient, NotificationType0, Diagnostic, PublishDiagnosticsParams, PublishDiagnosticsNotification, Range as LspRange } from "vscode-languageclient/lib/main";
-import { window, DecorationRangeBehavior, ThemeColor, DecorationRenderOptions, DecorationOptions, Range, TextEditorDecorationType, Disposable } from "vscode";
+import { window, DecorationRangeBehavior, ThemeColor, DecorationRenderOptions, DecorationOptions, Range, TextEditorDecorationType, Disposable, TextEditor } from "vscode";
 import { NotificationType1 } from "vscode-jsonrpc";
 import { isTypedHole, TypedHole } from "./typedHoles";
-
-interface DecorationsPerFile {
-  [uri: string]: TextEditorDecorationType[];
-}
+import { DecorationsPerFile } from "./decorationManagement";
 
 export class TypedHoleDecorator implements Disposable {
-  private readonly decorations: DecorationsPerFile = {};
+  private readonly decorations: DecorationsPerFile = new DecorationsPerFile();
 
   constructor(
     private readonly langClient: LanguageClient,
@@ -25,45 +22,19 @@ export class TypedHoleDecorator implements Disposable {
   }
 
   private addTypeHoleDecoration(diagnosticResponse: PublishDiagnosticsParams) {
-    const uri = diagnosticResponse.uri;
-    const textEditor = window.visibleTextEditors.find(textEditor => textEditor.document.uri.toString() === uri);
-    this.clearAllDecorationForFile(uri);
     
     const decorations = diagnosticResponse.diagnostics
       .map(diagnostic => { return {
         decorationType: mapOptional(isTypedHole(diagnostic.message), decorationFor),
-        range: diagnostic.range,
-        message: diagnostic.message,
+        range: convertRange(diagnostic.range)
       }})
       .filter(possibleHole => possibleHole.decorationType !== null);
 
-    decorations.forEach(decoration => textEditor.setDecorations(decoration.decorationType, [{
-      range: convertRange(decoration.range),
-      hoverMessage: {
-        language: 'text',
-        value: decoration.message
-      }
-    }]));
-
-    this.decorations[uri] = decorations.map(decoration => decoration.decorationType);
-  }
-
-  private clearAllDecorationForFile(uri: string) {
-    const decorationsForUri = this.decorations[uri];
-
-    if (decorationsForUri === undefined) {
-      return;
-    }
-
-    decorationsForUri.forEach(decoration => decoration.dispose());
+    this.decorations.get(diagnosticResponse.uri).setDecorations(decorations)
   }
 
   public dispose() {
-    for (const uri in this.decorations) {
-      if (this.decorations.hasOwnProperty(uri)) {
-        this.clearAllDecorationForFile(uri);
-      }
-    }
+    this.decorations.dispose();
   }
 }
 
