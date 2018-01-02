@@ -8,7 +8,7 @@ describe("Typed Hole Tests", () => {
     // Defines a Mocha unit test
     it("should identify a typed hole", () => {
         const typedHole = `
-• Found hole: _name :: Data.Text.Internal.Lazy.Text -> IO ()
+• Found hole: _ :: Data.Text.Internal.Lazy.Text -> IO ()
 • In the expression: _
   In the expression: _ $ ppllvm myModule
   In an equation for ‘printModule’: printModule = _ $ ppllvm myModule
@@ -18,7 +18,7 @@ describe("Typed Hole Tests", () => {
         `;
 
         expect(typedHoles.isTypedHole(typedHole)).to.be.deep.equal({
-            name: '_name',
+            name: '_',
             type: 'Data.Text.Internal.Lazy.Text -> IO ()'
         })
     });
@@ -26,7 +26,7 @@ describe("Typed Hole Tests", () => {
     it("should identify a typed hole that has gone onto many lines", () => {
         const typedHole = `
 • Found hole:
-    _hole :: LLVM.Internal.Target.TargetMachine
+    _ :: LLVM.Internal.Target.TargetMachine
          -> File -> LLVM.Internal.Module.Module -> IO ()
 • In the expression: _
   In the expression: _ targetMachine (File "foo") llvmModule
@@ -37,10 +37,27 @@ describe("Typed Hole Tests", () => {
       (bound at /private/var/folders/gx/7lt1gq996118d06q7g9ft7dd080grz/T/ghc-mod1563/Experiment1562-3.hs:35:51)`;
 
         expect(typedHoles.isTypedHole(typedHole)).to.be.deep.equal({
-            name: '_hole',
+            name: '_',
             type: 'LLVM.Internal.Target.TargetMachine -> File -> LLVM.Internal.Module.Module -> IO ()',
         })
     });
+
+    it("should not include the name mis-spelled/not-in-scope message", () => {
+        const typedHole = `
+• Found hole: _name :: Module
+  Or perhaps ‘_name’ is mis-spelled, or not in scope
+• In the first argument of ‘ppllvm’, namely ‘_name’
+  In the second argument of ‘($)’, namely ‘ppllvm _name’
+  In the expression: T.putStrLn $ ppllvm _name
+• Relevant bindings include
+    printModule :: IO ()
+    (bound at /private/var/folders/gx/7lt1gq996118d06q7g9ft7dd080grz/T/ghc-mod2068/Experiment2067-224.hs:28:1)`;
+
+        expect(typedHoles.isTypedHole(typedHole)).to.be.deep.equal({
+            name: '_name',
+            type: 'Module',
+        })
+    })
 
     it("should not identify a normal error as a typed hole", () => {
         const normalError = `
