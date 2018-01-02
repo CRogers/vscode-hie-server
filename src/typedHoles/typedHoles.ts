@@ -6,7 +6,7 @@ export interface TypedHole {
 export function isTypedHole(message: string): TypedHole | null {
   const noNewlines: string = message.replace(/\n(\s?)\s*/mg, '$1');
 
-  const match = /Found hole: (.*) :: (.*?)(•| Or perhaps)/.exec(noNewlines);
+  const match = /Found hole: (.*) :: (.*?)(•| Or perhaps| Where:)/.exec(noNewlines);
 
   if (match == null) {
     return null;

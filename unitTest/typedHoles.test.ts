@@ -59,6 +59,32 @@ describe("Typed Hole Tests", () => {
         })
     })
 
+    it("should not include the ambiguous type variables", () => {
+        const typedHole = `• Found hole:
+    _ :: [Char]
+         -> [(LLVM.AST.Type.Type, [Char])]
+         -> LLVM.AST.Type.Type
+         -> ([LLVM.AST.Operand.Operand] -> m0 ())
+         -> t0
+  Where: ‘m0’ is an ambiguous type variable
+         ‘t0’ is an ambiguous type variable
+• In the expression: _
+  In the expression: _ "add" [(i32, "a"), (half, "b")] i32
+  In a stmt of a 'do' block:
+    _ "add" [(i32, "a"), (half, "b")] i32
+      $ \ [a, b]
+          -> do entry <- block \`named\` "entry"
+                do ...
+• Relevant bindings include
+    myModule :: Module
+      (bound at /private/var/folders/gx/7lt1gq996118d06q7g9ft7dd080grz/T/ghc-mod4463/Experiment4462-36.hs:21:1)`;
+
+        expect(typedHoles.isTypedHole(typedHole)).to.be.deep.equal({
+            name: '_',
+            type: '[Char] -> [(LLVM.AST.Type.Type, [Char])] -> LLVM.AST.Type.Type -> ([LLVM.AST.Operand.Operand] -> m0 ()) -> t0',
+        })
+    });
+
     it("should not identify a normal error as a typed hole", () => {
         const normalError = `
 [ghcmod]
