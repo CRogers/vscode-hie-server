@@ -92,6 +92,8 @@ function activateNoHieCheck(context: ExtensionContext) {
     debug: { command: serverPath, args: ['-d', '-l', path.join(tempDir, 'hie.log')] },
   };
 
+  const typedHoleDecorator = new TypedHoleDecorator();
+
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for plain text documents
@@ -103,6 +105,7 @@ function activateNoHieCheck(context: ExtensionContext) {
       fileEvents: workspace.createFileSystemWatcher('**/.clientrc'),
     },
     middleware: {
+      didSave: (changeEvent) => { console.log('changed'); typedHoleDecorator.updateDecorations() },
       provideHover: DocsBrowser.hoverLinksMiddlewareHook
     },
     revealOutputChannelOn: RevealOutputChannelOn.Never,
@@ -120,8 +123,7 @@ function activateNoHieCheck(context: ExtensionContext) {
   registerHiePointCommand(langClient, 'hie.commands.deleteDef', 'hare:deletedef', context);
   registerHiePointCommand(langClient, 'hie.commands.genApplicative', 'hare:genapplicative', context);
   const langClientDisposable = langClient.start();
-
-  const typedHoleDecoratorDisposable = new TypedHoleDecorator(langClient).start();
+  const typedHoleDecoratorDisposable = typedHoleDecorator.start(langClient.diagnostics);
 
   context.subscriptions.push(langClientDisposable, typedHoleDecoratorDisposable);
 }

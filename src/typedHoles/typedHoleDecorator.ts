@@ -1,22 +1,40 @@
-import { LanguageClient, NotificationType0, Diagnostic, PublishDiagnosticsParams, PublishDiagnosticsNotification, Range as LspRange } from "vscode-languageclient/lib/main";
-import { window, DecorationRangeBehavior, ThemeColor, DecorationRenderOptions, DecorationOptions, Range, TextEditorDecorationType, Disposable, TextEditor } from "vscode";
+import { LanguageClient, NotificationType0, Diagnostic, PublishDiagnosticsParams, PublishDiagnosticsNotification, Range as LspRange, Position } from "vscode-languageclient/lib/main";
+import { window, DecorationRangeBehavior, ThemeColor, DecorationRenderOptions, DecorationOptions, Range, TextEditorDecorationType, Disposable, TextEditor, DiagnosticCollection } from "vscode";
 import { NotificationType1 } from "vscode-jsonrpc";
 import { isTypedHole, TypedHole } from "./typedHoles";
 import { DecorationsPerFile } from "./decorationManagement";
+import { setInterval } from "timers";
 
 export class TypedHoleDecorator implements Disposable {
   private readonly decorationsPerFile: DecorationsPerFile = new DecorationsPerFile();
+  private diagnosticCollection: DiagnosticCollection = null;
 
-  constructor(
-    private readonly langClient: LanguageClient,
-  ) {}
+  constructor() {}
 
-  public start(): Disposable {
-    this.langClient.onReady().then(() => {
-      this.langClient.onNotification(PublishDiagnosticsNotification.type, this.addTypeHoleDecoration.bind(this));
-    });
+  public start(diagnosticCollection: DiagnosticCollection): Disposable {
+    this.diagnosticCollection = diagnosticCollection;
+    // this.langClient.onReady().then(() => {
+    //   setInterval(() => {
+    //     this.updateDecorations();
+    //   }, 1000);
+    //   // this.langClient.onNotification(PublishDignosticsNotification.type, this.addTypeHoleDecoration.bind(this));
+    // });
     
     return this;
+  }
+
+  public updateDecorations() {
+    if (this.diagnosticCollection == null) {
+      return;
+    }
+
+    this.diagnosticCollection.forEach((uri, diagnostics) => this.addTypeHoleDecoration({
+      uri: uri.toString(),
+      diagnostics: diagnostics.map(diag => Diagnostic.create({
+        start: Position.create(diag.range.start.line, diag.range.start.character),
+        end: Position.create(diag.range.end.line, diag.range.end.character)
+      }, diag.message))
+    }));
   }
 
   private addTypeHoleDecoration(diagnosticResponse: PublishDiagnosticsParams) {
